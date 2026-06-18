@@ -114,7 +114,9 @@ def fetch_all(sources: list[dict], conn, force: bool = False) -> list[dict]:
                 "source": source["name"],
                 "category": source["category"],
                 "summary": entry.get("summary", ""),
-                "published": entry.get("published", datetime.now().isoformat())
+                "published": entry.get("published", datetime.now().isoformat()),
+                "read": 0,
+                "relevance": 0.0
             })
     
     save_articles(conn, all_articles)
@@ -141,6 +143,19 @@ def fetch_article_content(url: str) -> str:
         return text if text else "Could not get article content."
     except Exception as e:
         return f"Failed to fetch article: {e}"
+
+def get_digest(conn, limit: int = 10) -> list[dict]:
+    cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
+    rows = conn.execute("""
+        SELECT * FROM articles
+        WHERE fetched_at > ?
+        ORDER BY published DESC
+    """, (cutoff,)).fetchall()
+    articles = [dict(row) for row in rows]
+    for a in articles:
+        a["relevance"] = score_article(conn, a)
+    articles.sort(key=lambda a: a["relevance"], reverse=True)
+    return articles[:limit]
 
 # topics
 def extract_topics(title: str, summary: str) -> list[str]:
