@@ -1,0 +1,34 @@
+ListView {
+    height: 1fr;
+}
+
+ListItem {
+    padding: 1 1;
+    height: 3;
+}
+
+ListItem:focus-within {
+    background: $accent;
+    color: $text;
+}
+
+#article-md {
+    align: center top;
+    width: 70%;
+}
+
+#actions {
+    height: 3;
+    dock: bottom;
+    padding: 0 1;
+    margin-bottom: 3;
+}
+
+#actions Button {
+    margin: 0 1;
+}
+
+#search-bar {
+    dock: top;
+    margin: 2 0;
+}
