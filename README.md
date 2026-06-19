@@ -1,6 +1,6 @@
 # briefd
 
-A fast, keyboard driven terminal news reader with personalized relevance scoring.
+A fast, customizable terminal news reader with personalized relevance scoring.
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20mac-lightgrey)
