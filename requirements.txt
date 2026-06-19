@@ -3,3 +3,5 @@ rich
 textual
 beautifulsoup4
 httpx
+tomli-w
+plyer

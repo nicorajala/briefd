@@ -2,10 +2,9 @@ ListView {
     height: 1fr;
 }
 
-ListItem {
-    padding: 1 1;
-    height: 3;
-}
+.density-low ListItem    { height: 5; padding: 1 1;}
+.density-medium ListItem { height: 3; padding: 1 1;}
+.density-high ListItem   { height: 1; padding: 0; }
 
 ListItem:focus-within {
     background: $accent;
@@ -31,4 +30,13 @@ ListItem:focus-within {
 #search-bar {
     dock: top;
     margin: 2 0;
+}
+
+#settings-list {
+    margin: 1 0;
+    height: 0.9fr;
+}
+
+#settings-list > .option-list--option {
+    padding: 0 2;
 }

@@ -27,6 +27,20 @@ def load_config(path=CONFIG_PATH):
     with open(path, "rb") as f:
         return tomllib.load(f)
 
+def save_display_pref(key: str, value):
+    config = load_config()
+    if "display" not in config:
+        config["display"] = {}
+    config["display"][key] = value
+
+    import tomli_w                      # tomllib is readonly :(
+    with open(CONFIG_PATH, "wb") as f:
+        tomli_w.dump(config, f)
+
+def load_display_pref(key: str, default=None):
+    config = load_config()
+    return config.get("display", {}).get(key, default)
+
 # database
 def get_db() -> sqlite3.Connection:
     first_run = not os.path.exists(DB_PATH)
@@ -76,11 +90,12 @@ def save_articles(conn, articles: list[dict]):
         ))
     conn.commit()
 
-def load_cached_articles(conn, max_age_hours: int = 1) -> list[dict]:
+def load_cached_articles(conn, max_age_hours: int = 72) -> list[dict]:
     cutoff = (datetime.now() - timedelta(hours=max_age_hours)).isoformat()
     rows = conn.execute("""
         SELECT * FROM articles
         WHERE fetched_at > ?
+        GROUP BY url
         ORDER BY published DESC
     """, (cutoff,)).fetchall()
     articles = [dict(row) for row in rows]
@@ -94,6 +109,14 @@ def mark_as_read(conn, article_id: str):
     conn.execute("UPDATE articles SET read = 1 WHERE id = ?", (article_id,))
     conn.commit()
 
+def mark_all_read(conn):
+    conn.execute("UPDATE articles SET read = 1")
+    conn.commit()
+
+def clear_topic_scores(conn):
+    conn.execute("DELETE FROM topic_scores")
+    conn.commit()
+
 # fetching
 def fetch_all(sources: list[dict], conn, force: bool = False) -> list[dict]:
     if not force:
@@ -105,21 +128,26 @@ def fetch_all(sources: list[dict], conn, force: bool = False) -> list[dict]:
     for source in sources:
         if not source.get("enabled", True):
             continue
-        feed = feedparser.parse(source["url"])
-        for entry in feed.entries:
-            all_articles.append({
-                "id": entry.get("id", entry.link),
-                "title": entry.title,
-                "url": entry.link,
-                "source": source["name"],
-                "category": source["category"],
-                "summary": entry.get("summary", ""),
-                "published": entry.get("published", datetime.now().isoformat()),
-                "read": 0,
-                "relevance": 0.0
-            })
+        try:
+            feed = feedparser.parse(source["url"])
+            for entry in feed.entries:
+                all_articles.append({
+                    "id": entry.get("id", entry.link),
+                    "title": entry.title,
+                    "url": entry.link,
+                    "source": source["name"],
+                    "category": source["category"],
+                    "summary": entry.get("summary", ""),
+                    "published": entry.get("published", datetime.now().isoformat()),
+                    "read": 0,
+                    "relevance": 0.0
+                })
+        except Exception as e:
+            print(f"Failed to fetch {source['name']}: {e}")
+            continue
     
-    save_articles(conn, all_articles)
+    if all_articles:
+        save_articles(conn, all_articles)
     return all_articles
 
 def fetch_article_content(url: str) -> str:

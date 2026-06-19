@@ -1,0 +1,21 @@
+[user]
+name = "YourName"
+interests = ["programming", "linux", "music"]
+
+[[sources]]
+name = "Hacker News"
+url = "https://news.ycombinator.com/rss"
+category = "tech"
+enabled = true
+
+[[sources]]
+name = "BBC News"
+url = "https://feeds.bbci.co.uk/news/rss.xml"
+category = "world"
+enabled = true
+
+[display]
+density = "high"
+show_timestamps = true
+show_sources = true
+sort = "relevance"

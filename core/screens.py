@@ -63,6 +63,9 @@ class FeedScreen(Screen):
         self.all_articles = articles
         self.conn = conn
 
+        self.show_sources = backend.load_display_pref("show_sources", default=True)
+        self.show_timestamps = backend.load_display_pref("show_timestamps", default=False)
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Input(placeholder="Search articles... (/ to focus, esc to clear)", id="search-bar")
@@ -96,9 +99,16 @@ class FeedScreen(Screen):
     def make_item(self, a: dict) -> ListItem:
         colors = {"tech": "cyan", "world": "yellow", "music": "magenta"}
         color = colors.get(a["category"], "white")
-        source_tag = f"[{color}][[{a['source']}]][/{color}]"
-        title = f"[dim]{a['title']}[/dim]" if a["read"] else a["title"]
-        return ListItem(Label(f"{source_tag} {title}"))
+
+        parts = []
+        if self.show_sources:
+            parts.append(f"[{color}][[{a['source']}]][/{color}]")
+        if self.show_timestamps:
+            parts.append(f"[dim]{a.get('published', '')[:16]}[/dim]")
+        title = f"[dim]{a['title']}[/dim]" if a.get("read", 0) else a["title"]
+        parts.append(title)
+
+        return ListItem(Label(" ".join(parts)))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index
@@ -113,6 +123,38 @@ class FeedScreen(Screen):
         read_tag = "- READ!"
         event.item.query_one(Label).update(f"{source_tag} [dim]{article['title']} {read_tag}[/dim]")
         self.app.push_screen(ArticleScreen(article, self.conn))
+    
+    def apply_read_filter(self, unread_only: bool):
+        if unread_only:
+            filtered = [a for a in self.all_articles if not a.get("read", 0)]
+        else:
+            filtered = self.all_articles
+        self.refresh_list(filtered)
+        state = "unread only" if unread_only else "all articles"
+        self.notify(f"Showing {state}")
+
+    def sort_by(self, key: str):
+        if key == "relevance":
+            self.articles = sorted(self.all_articles, key=lambda a: a.get("relevance", 0), reverse=True)
+        elif key == "date":
+            self.articles = sorted(self.all_articles, key=lambda a: a.get("published", ""), reverse=False)
+        elif key == "source":
+            self.articles = sorted(self.all_articles, key=lambda a: a.get("source", ""))
+        backend.save_display_pref("sort", key)
+        self.refresh_list(self.articles)
+        self.notify(f"Sorted by {key}.")
+
+    def toggle_source_tags(self):
+        self.show_sources = not self.show_sources
+        backend.save_display_pref("show_sources", self.show_sources)
+        self.refresh_list(self.articles)
+        self.notify(f"Source tags {'shown' if self.show_sources else 'hidden'}.")
+
+    def toggle_timestamps(self):
+        self.show_timestamps = not self.show_timestamps
+        backend.save_display_pref("show_timestamps", self.show_timestamps)
+        self.refresh_list(self.articles)
+        self.notify(f"Timestamps {'shown' if self.show_timestamps else 'hidden'}.")
 
     @work(thread=True)
     def action_reload(self):
