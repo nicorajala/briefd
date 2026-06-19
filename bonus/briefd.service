@@ -1,0 +1,10 @@
+[Unit]
+Description=briefd news daemon
+After=network.target
+
+[Service]
+ExecStart=briefd --daemon --update 1
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
