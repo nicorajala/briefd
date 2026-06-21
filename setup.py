@@ -10,13 +10,24 @@ def get_app_dir() -> Path:
         base = Path(os.environ.get("APPDATA", Path.home()))
     else:
         base = Path.home()
-    app_dir = base / "briefd"
+    app_dir = base / ".briefd"
     app_dir.mkdir(parents=True, exist_ok=True)
     return app_dir
 
+def get_venv_dir() -> Path:
+    return get_app_dir() / "venv"
+
 def install_packages():
     print("Installing required packages...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+    if sys.platform == "win32":
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+    else:
+        venv_dir = get_venv_dir()
+        if not venv_dir.exists():
+            print(f"Creating a virtual environment at {venv_dir}...")
+            subprocess.check_call([sys.executable, "-m", "venv", str(venv_dir)])
+        venv_pip = venv_dir / "bin" / "pip"
+        subprocess.check_call([str(venv_pip), "install", "-r", "requirements.txt"])
 
 def create_launcher():
     script_dir = Path(__file__).parent.resolve()
@@ -38,16 +49,19 @@ def create_launcher():
         if str(script_dir) not in current_path:
             winreg.SetValueEx(key, "Path", 0, winreg.REG_EXPAND_SZ, f"{current_path};{script_dir}")
             winreg.CloseKey(key)
-            print(f"Added {script_dir} to PATH — restart your terminal for it to take effect.")
+            print(f"Added {script_dir} to PATH -- restart your terminal for it to take effect.")
         else:
             print("Already in PATH.")
 
     else:
-        # unix — create a shell script in /usr/local/bin or ~/.local/bin
+        # unix -- create a shell script in /usr/local/bin or ~/.local/bin
+        venv_python = get_venv_dir() / "bin" / "python"
         local_bin = Path.home() / ".local" / "bin"
         local_bin.mkdir(parents=True, exist_ok=True)
         launcher = local_bin / "briefd"
-        launcher.write_text(f'#!/bin/sh\nexec python3 "{main_script}" "$@"\n')
+        launcher.write_text(
+            f'#!/bin/sh\nexec "{venv_python}" "{main_script}" "$@"\n'
+        )
         launcher.chmod(0o755)
         print(f"Launcher created at {launcher}")
         print("Make sure ~/.local/bin is in your PATH.")

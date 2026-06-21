@@ -4,6 +4,7 @@
 
 import core.backend as backend
 import core.screens as screens
+import os
 import sys
 import argparse
 

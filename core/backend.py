@@ -15,7 +15,7 @@ def get_app_dir() -> Path:
         base = Path(os.environ.get("APPDATA", Path.home()))
     else:
         base = Path.home()
-    app_dir = base / "briefd"
+    app_dir = base / ".briefd"
     app_dir.mkdir(parents=True, exist_ok=True)
     return app_dir
 
